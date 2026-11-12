@@ -20,21 +20,32 @@ static char rx_buff[32] = { 0, };
 
 comm_data_t data;
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-	if (huart->Instance == USART2) {
-		if (rx_data == '*') {
-			rx_buff[rx_index++] = '\0';
-			rx_done = 1;
-		} else {
-			rx_buff[rx_index++] = rx_data;
-		}
-		HAL_UART_Receive_IT(&huart2, &rx_data, 1);
+//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+//	if (huart->Instance == USART2) {
+//		if (rx_data == '*') {
+//			rx_buff[rx_index++] = '\0';
+//			rx_done = 1;
+//		} else {
+//			rx_buff[rx_index++] = rx_data;
+//		}
+//		HAL_UART_Receive_IT(&huart2, &rx_data, 1);
+//	}
+//}
+
+static void comm_task_rx_cplt(UART_HandleTypeDef *huart) {
+	if (rx_data == '*') {
+		rx_buff[rx_index++] = '\0';
+		rx_done = 1;
+	} else {
+		rx_buff[rx_index++] = rx_data;
 	}
+	HAL_UART_Receive_IT(&huart2, &rx_data, 1);
 }
 
 void comm_task_init() {
 	rx_index = 0;
 	rx_done = 0;
+	HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, comm_task_rx_cplt);
 	HAL_UART_Receive_IT(&huart2, &rx_data, 1);
 }
 

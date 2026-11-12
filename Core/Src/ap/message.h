@@ -12,6 +12,7 @@
 
 extern osMessageQId BtnQueueHandle;
 extern osMessageQId CommQueueHandle;
+extern osMessageQId BtQueueHandle;
 extern osMutexId lcdMutexHandle;
 
 typedef enum {
@@ -19,5 +20,7 @@ typedef enum {
 } btn_status_t;
 
 typedef enum { COMM_NO, COMM_STOP, COMM_RUN, COMM_SPEED } comm_status_t;
+
+typedef enum { BT_NO, BT_STOP, BT_FRONT, BT_BACK, BT_LEFT, BT_RIGHT } bt_status_t;
 
 #endif /* SRC_AP_TASK_MESSAGE_H_ */

@@ -9,6 +9,7 @@
 #include "../../message.h"
 #include "../comm/comm_task.h"
 #include "../../../driver/lcd/lcd.h"
+#include <stdbool.h>
 
 motor_t motorL, motorR;
 motor_state_t motor_state = STOP;
@@ -23,8 +24,34 @@ void motor_control_task_init(void) {
 	motor_setSpeed(900);
 }
 
+bool motor_getCondition(btn_status_t btn_status, comm_status_t comm_status,
+		bt_status_t bt_status, motor_state_t dir) {
+	switch (dir) {
+	case STOP:
+		return (btn_status == BTN_RUN_STOP) || (comm_status == COMM_STOP)
+				|| (bt_status == BT_STOP);
+		break;
+	case FORWARD:
+		return (btn_status == BTN_RUN_STOP) || (comm_status == COMM_RUN)
+				|| (bt_status == BT_FRONT);
+		break;
+	case BACKWARD:
+		return (bt_status == BT_BACK);
+		break;
+	case RIGHT:
+		return (btn_status == BTN_RIGHT) || (bt_status == BT_RIGHT);
+		break;
+	case LEFT:
+		return (btn_status == BTN_LEFT) || (bt_status == BT_LEFT);
+		break;
+	default:
+		return false;
+		break;
+	}
+}
+
 void motor_control_task(void) {
-	osEvent btn_evt, comm_evt;
+	osEvent btn_evt, comm_evt, bt_evt;
 	btn_status_t btn_status = BTN_NO;
 	btn_evt = osMessageGet(BtnQueueHandle, 0);
 	if (btn_evt.status == osEventMessage) {
@@ -35,8 +62,14 @@ void motor_control_task(void) {
 	int speed = 0;
 	comm_evt = osMessageGet(CommQueueHandle, 0);
 	if (comm_evt.status == osEventMessage) {
-		comm_status = ((comm_data_t *)comm_evt.value.p)->status;
-		speed = ((comm_data_t *)comm_evt.value.p)->speed;
+		comm_status = ((comm_data_t*) comm_evt.value.p)->status;
+		speed = ((comm_data_t*) comm_evt.value.p)->speed;
+	}
+
+	bt_status_t bt_status = BT_NO;
+	bt_evt = osMessageGet(BtQueueHandle, 0);
+	if (bt_evt.status == osEventMessage) {
+		bt_status = bt_evt.value.v;
 	}
 
 	if (comm_status == COMM_SPEED) {
@@ -45,8 +78,17 @@ void motor_control_task(void) {
 
 	switch (motor_state) {
 	case STOP:
-		if ((btn_status == BTN_RUN_STOP) || (comm_status == COMM_RUN)) {
+		if (motor_getCondition(btn_status, comm_status, bt_status, FORWARD)) {
 			motor_state = FORWARD;
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				BACKWARD)) {
+			motor_state = BACKWARD;
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				RIGHT)) {
+			motor_state = RIGHT;
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				LEFT)) {
+			motor_state = LEFT;
 		}
 		motor_stop(&motorL, &motorR);
 
@@ -56,11 +98,16 @@ void motor_control_task(void) {
 		}
 		break;
 	case FORWARD:
-		if ((btn_status == BTN_RUN_STOP) || (comm_status == COMM_STOP)) {
+		if (motor_getCondition(btn_status, comm_status, bt_status, STOP)) {
 			motor_state = STOP;
-		} else if (btn_status == BTN_RIGHT) {
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				BACKWARD)) {
+			motor_state = BACKWARD;
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				RIGHT)) {
 			motor_state = RIGHT;
-		} else if (btn_status == BTN_LEFT) {
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				LEFT)) {
 			motor_state = LEFT;
 		}
 
@@ -72,12 +119,17 @@ void motor_control_task(void) {
 		}
 		break;
 	case BACKWARD:
-		if ((btn_status == BTN_RUN_STOP) || (comm_status == COMM_STOP)) {
+		if (motor_getCondition(btn_status, comm_status, bt_status, STOP)) {
 			motor_state = STOP;
-		} else if (btn_status == BTN_RIGHT) {
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				FORWARD)) {
 			motor_state = FORWARD;
-		} else if (btn_status == BTN_LEFT) {
-			motor_state = FORWARD;
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				RIGHT)) {
+			motor_state = RIGHT;
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				LEFT)) {
+			motor_state = LEFT;
 		}
 
 		motor_backward(&motorL, &motorR);
@@ -87,10 +139,17 @@ void motor_control_task(void) {
 		}
 		break;
 	case RIGHT:
-		if ((btn_status == BTN_RUN_STOP) || (comm_status == COMM_STOP)) {
+		if (motor_getCondition(btn_status, comm_status, bt_status, STOP)) {
 			motor_state = STOP;
-		} else if (btn_status == BTN_RIGHT) {
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				FORWARD)) {
+			motor_state = FORWARD;
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				BACKWARD)) {
 			motor_state = BACKWARD;
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				LEFT)) {
+			motor_state = LEFT;
 		}
 
 		motor_right(&motorL, &motorR);
@@ -100,10 +159,17 @@ void motor_control_task(void) {
 		}
 		break;
 	case LEFT:
-		if ((btn_status == BTN_RUN_STOP) || (comm_status == COMM_STOP)) {
+		if (motor_getCondition(btn_status, comm_status, bt_status, STOP)) {
 			motor_state = STOP;
-		} else if (btn_status == BTN_LEFT) {
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				FORWARD)) {
+			motor_state = FORWARD;
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				BACKWARD)) {
 			motor_state = BACKWARD;
+		} else if (motor_getCondition(btn_status, comm_status, bt_status,
+				RIGHT)) {
+			motor_state = RIGHT;
 		}
 
 		motor_left(&motorL, &motorR);

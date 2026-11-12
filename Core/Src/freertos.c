@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * File Name          : freertos.c
-  * Description        : Code for freertos applications
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * File Name          : freertos.c
+ * Description        : Code for freertos applications
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -25,6 +25,14 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "ap/task/button/button_task.h"
+#include "ap/task/motor_control/motor_control_task.h"
+#include "ap/task/comm/comm_task.h"
+#include "ap/task/bluetooth/bt_task.h"
+
+#include "i2c.h"
+#include "driver/lcd/lcd.h"
+#include <stdio.h>
 
 /* USER CODE END Includes */
 
@@ -51,8 +59,10 @@ osThreadId defaultTaskHandle;
 osThreadId MotorTaskHandle;
 osThreadId ButtonTaskHandle;
 osThreadId CommTaskHandle;
+osThreadId BtTaskHandle;
 osMessageQId BtnQueueHandle;
 osMessageQId CommQueueHandle;
+osMessageQId BtQueueHandle;
 osMutexId lcdMutexHandle;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,6 +74,7 @@ void StartDefaultTask(void const * argument);
 void StartMotorTask(void const * argument);
 void StartButtonTask(void const * argument);
 void StartCommTask(void const * argument);
+void StartBtTask(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -74,12 +85,12 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackTy
 static StaticTask_t xIdleTaskTCBBuffer;
 static StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
 
-void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
-{
-  *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
-  *ppxIdleTaskStackBuffer = &xIdleStack[0];
-  *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
-  /* place for user code */
+void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
+		StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize) {
+	*ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
+	*ppxIdleTaskStackBuffer = &xIdleStack[0];
+	*pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+	/* place for user code */
 }
 /* USER CODE END GET_IDLE_TASK_MEMORY */
 
@@ -98,15 +109,15 @@ void MX_FREERTOS_Init(void) {
   lcdMutexHandle = osMutexCreate(osMutex(lcdMutex));
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
+	/* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
+	/* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
+	/* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
@@ -118,8 +129,12 @@ void MX_FREERTOS_Init(void) {
   osMessageQDef(CommQueue, 16, uint32_t);
   CommQueueHandle = osMessageCreate(osMessageQ(CommQueue), NULL);
 
+  /* definition and creation of BtQueue */
+  osMessageQDef(BtQueue, 16, uint32_t);
+  BtQueueHandle = osMessageCreate(osMessageQ(BtQueue), NULL);
+
   /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
+	/* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -139,82 +154,113 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(CommTask, StartCommTask, osPriorityNormal, 0, 128);
   CommTaskHandle = osThreadCreate(osThread(CommTask), NULL);
 
+  /* definition and creation of BtTask */
+  osThreadDef(BtTask, StartBtTask, osPriorityNormal, 0, 512);
+  BtTaskHandle = osThreadCreate(osThread(BtTask), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+	/* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
 /**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
+ * @brief  Function implementing the defaultTask thread.
+ * @param  argument: Not used
+ * @retval None
+ */
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+	if (osMutexWait(lcdMutexHandle, osWaitForever) == osOK) {
+		// 키 가져오기 성공
+		Lcd_init(&hi2c1);
+		osMutexRelease(lcdMutexHandle); // 다썼으니 키 돌려주기
+	}
+	/* Infinite loop */
+	for (;;) {
+		osDelay(1);
+	}
   /* USER CODE END StartDefaultTask */
 }
 
 /* USER CODE BEGIN Header_StartMotorTask */
 /**
-* @brief Function implementing the MotorTask thread.
-* @param argument: Not used
-* @retval None
-*/
+ * @brief Function implementing the MotorTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
 /* USER CODE END Header_StartMotorTask */
 void StartMotorTask(void const * argument)
 {
   /* USER CODE BEGIN StartMotorTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+	motor_control_task_init();
+	/* Infinite loop */
+	for (;;) {
+		motor_control_task();
+		osDelay(1);
+	}
   /* USER CODE END StartMotorTask */
 }
 
 /* USER CODE BEGIN Header_StartButtonTask */
 /**
-* @brief Function implementing the ButtonTask thread.
-* @param argument: Not used
-* @retval None
-*/
+ * @brief Function implementing the ButtonTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
 /* USER CODE END Header_StartButtonTask */
 void StartButtonTask(void const * argument)
 {
   /* USER CODE BEGIN StartButtonTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+	button_task_init();
+	/* Infinite loop */
+	for (;;) {
+		button_task();
+		osDelay(1);
+	}
   /* USER CODE END StartButtonTask */
 }
 
 /* USER CODE BEGIN Header_StartCommTask */
 /**
-* @brief Function implementing the CommTask thread.
-* @param argument: Not used
-* @retval None
-*/
+ * @brief Function implementing the CommTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
 /* USER CODE END Header_StartCommTask */
 void StartCommTask(void const * argument)
 {
   /* USER CODE BEGIN StartCommTask */
+	comm_task_init();
+	/* Infinite loop */
+	for (;;) {
+		comm_task();
+		osDelay(1);
+	}
+  /* USER CODE END StartCommTask */
+}
+
+/* USER CODE BEGIN Header_StartBtTask */
+/**
+* @brief Function implementing the BtTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartBtTask */
+void StartBtTask(void const * argument)
+{
+  /* USER CODE BEGIN StartBtTask */
+	bt_task_init();
   /* Infinite loop */
   for(;;)
   {
+	  bt_task();
     osDelay(1);
   }
-  /* USER CODE END StartCommTask */
+  /* USER CODE END StartBtTask */
 }
 
 /* Private application code --------------------------------------------------*/
