@@ -51,8 +51,8 @@ bool motor_getCondition(btn_status_t btn_status, comm_status_t comm_status,
 	}
 }
 
-#define DIST_DANGER	20
-#define DIST_SAFE	40
+#define DIST_DANGER	25 // motor speed 500
+#define DIST_SAFE	45 // motor speed 500
 #define DIST_INVALID 0xFFFFFFFF
 
 typedef enum {
@@ -62,7 +62,7 @@ typedef enum {
 typedef enum {
 	MANUAL, AUTO
 } automobile_state_t;
-automobile_state_t mobile_state = MANUAL;
+automobile_state_t mobile_state = AUTO;
 
 auto_state_t auto_state = AUTO_STOP;
 
@@ -80,7 +80,7 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 
 	switch (auto_state) {
 	case AUTO_STOP:
-		if ((bt_status == BT_FRONT)) {
+		if ((bt_status == BT_FRONT) || (btn_status == BTN_RUN_STOP)) {
 			auto_state = AUTO_STRAIGHT;
 		}
 
@@ -92,7 +92,8 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 		break;
 	case AUTO_STRAIGHT:
 		if ((bt_status == BT_STOP) || (btn_status == BTN_RUN_STOP)
-				|| (motor_stucked())) {
+//				|| (motor_stucked())
+				) {
 			auto_state = AUTO_STOP;
 		} else if (d_front <= DIST_DANGER) {
 			if (d_left >= d_right) {
@@ -110,7 +111,8 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 		break;
 	case AUTO_LEFT:
 		if ((bt_status == BT_STOP) || (btn_status == BTN_RUN_STOP)
-				|| (motor_stucked())) {
+//				|| (motor_stucked())
+				) {
 			auto_state = AUTO_STOP;
 		} else if (d_front >= DIST_SAFE) {
 			auto_state = AUTO_STRAIGHT;
@@ -124,7 +126,8 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 		break;
 	case AUTO_RIGHT:
 		if ((bt_status == BT_STOP) || (btn_status == BTN_RUN_STOP)
-				|| (motor_stucked())) {
+//				|| (motor_stucked())
+				) {
 			auto_state = AUTO_STOP;
 		} else if (d_front >= DIST_SAFE) {
 			auto_state = AUTO_STRAIGHT;

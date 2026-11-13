@@ -41,14 +41,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 void dist_task_init() {
 	HCSR04_init(&sr04_front, SR04_FRONT_TRIG_GPIO, SR04_FRONT_TRIG_PIN,
-			SR04_FRONT_ECHO_GPIO, SR04_FRONT_ECHO_PIN);
+	SR04_FRONT_ECHO_GPIO, SR04_FRONT_ECHO_PIN);
 	HCSR04_init(&sr04_left, SR04_LEFT_TRIG_GPIO, SR04_LEFT_TRIG_PIN,
-			SR04_LEFT_ECHO_GPIO, SR04_LEFT_ECHO_PIN);
+	SR04_LEFT_ECHO_GPIO, SR04_LEFT_ECHO_PIN);
 	HCSR04_init(&sr04_right, SR04_RIGHT_TRIG_GPIO, SR04_RIGHT_TRIG_PIN,
-			SR04_RIGHT_ECHO_GPIO, SR04_RIGHT_ECHO_PIN);
+	SR04_RIGHT_ECHO_GPIO, SR04_RIGHT_ECHO_PIN);
 }
 
-void dist_measure(sr04_sensor_t* s, uint32_t *cm) {
+void dist_measure(sr04_sensor_t *s, uint32_t *cm) {
 	uint32_t us = 0;
 	hcsr04_status_t status = HCSR04_start(s);
 
@@ -61,8 +61,10 @@ void dist_measure(sr04_sensor_t* s, uint32_t *cm) {
 		status = HCSR04_getResult(s, &us);
 	} while (status == HCSR04_IN_PROGRESS);
 
-	if (status == HCSR04_OK) *cm = us / 58;
-	else *cm = DIST_INVALID;
+	if (status == HCSR04_OK)
+		*cm = us / 58;
+	else
+		*cm = DIST_INVALID;
 }
 
 void dist_task(uint32_t *front, uint32_t *left, uint32_t *right) {
