@@ -75,6 +75,8 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 	static uint32_t d_front = 0, d_left = 0, d_right = 0;
 
 	d_front = (front == DIST_INVALID) ? 400 : front;
+	d_left = (left == DIST_INVALID) ? 0 : left;
+	d_right = (right == DIST_INVALID) ? 0 : right;
 
 	switch (auto_state) {
 	case AUTO_STOP:
@@ -83,40 +85,71 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 		}
 
 		motor_stop(&motorL, &motorR);
+		if (osMutexWait(lcdMutexHandle, osWaitForever) == osOK) {
+			Lcd_writeStringXY(0, 0, "AUTO task STOP   ");
+			osMutexRelease(lcdMutexHandle);
+		}
 		break;
 	case AUTO_STRAIGHT:
-		if ((bt_status == BT_STOP) || (motor_stucked())) {
+		if ((bt_status == BT_STOP) || (btn_status == BTN_RUN_STOP)
+				|| (motor_stucked())) {
 			auto_state = AUTO_STOP;
 		} else if (d_front <= DIST_DANGER) {
-			d_left = (left == DIST_INVALID) ? 0 : left;
-			d_right = (right == DIST_INVALID) ? 0 : right;
-
 			if (d_left >= d_right) {
-				auto_state = AUTO_LEFT;
-			} else {
 				auto_state = AUTO_RIGHT;
+			} else {
+				auto_state = AUTO_LEFT;
 			}
 		}
 
 		motor_forward(&motorL, &motorR);
+		if (osMutexWait(lcdMutexHandle, osWaitForever) == osOK) {
+			Lcd_writeStringXY(0, 0, "AUTO task FORWARD   ");
+			osMutexRelease(lcdMutexHandle);
+		}
 		break;
 	case AUTO_LEFT:
-		if ((bt_status == BT_STOP) || (motor_stucked())) {
+		if ((bt_status == BT_STOP) || (btn_status == BTN_RUN_STOP)
+				|| (motor_stucked())) {
 			auto_state = AUTO_STOP;
 		} else if (d_front >= DIST_SAFE) {
 			auto_state = AUTO_STRAIGHT;
 		}
 
 		motor_left(&motorL, &motorR);
+		if (osMutexWait(lcdMutexHandle, osWaitForever) == osOK) {
+			Lcd_writeStringXY(0, 0, "AUTO task LEFT   ");
+			osMutexRelease(lcdMutexHandle);
+		}
 		break;
 	case AUTO_RIGHT:
-		if ((bt_status == BT_STOP) || (motor_stucked())) {
+		if ((bt_status == BT_STOP) || (btn_status == BTN_RUN_STOP)
+				|| (motor_stucked())) {
 			auto_state = AUTO_STOP;
 		} else if (d_front >= DIST_SAFE) {
 			auto_state = AUTO_STRAIGHT;
 		}
 
 		motor_right(&motorL, &motorR);
+		if (osMutexWait(lcdMutexHandle, osWaitForever) == osOK) {
+			Lcd_writeStringXY(0, 0, "AUTO task RIGHT   ");
+			osMutexRelease(lcdMutexHandle);
+		}
+		break;
+	case AUTO_BACK:
+		if ((d_left >= DIST_SAFE) || (d_right >= DIST_SAFE)) {
+			if (d_left >= d_right) {
+				auto_state = AUTO_RIGHT;
+			} else {
+				auto_state = AUTO_LEFT;
+			}
+		}
+
+		motor_backward(&motorL, &motorR);
+		if (osMutexWait(lcdMutexHandle, osWaitForever) == osOK) {
+			Lcd_writeStringXY(0, 0, "AUTO task BACKWARD   ");
+			osMutexRelease(lcdMutexHandle);
+		}
 		break;
 	default:
 		auto_state = AUTO_STOP;
@@ -185,6 +218,7 @@ void motor_manual_control_task(btn_status_t btn_status,
 		}
 
 		motor_backward(&motorL, &motorR);
+
 		if (osMutexWait(lcdMutexHandle, osWaitForever) == osOK) {
 			Lcd_writeStringXY(0, 0, "Motor Task BACK   ");
 			osMutexRelease(lcdMutexHandle);
@@ -267,7 +301,12 @@ void motor_control_task() {
 	if (bt_status == BT_MODE) {
 		auto_state = AUTO_STOP;
 		manual_state = STOP;
-		mobile_state = (mobile_state == MANUAL) ? AUTO : MANUAL;
+		if (mobile_state == MANUAL) {
+			mobile_state = AUTO;
+			motor_setSpeed(500);
+		} else {
+			mobile_state = MANUAL;
+		}
 		motor_stop(&motorL, &motorR);
 		return;
 	}
@@ -277,7 +316,7 @@ void motor_control_task() {
 		motor_manual_control_task(btn_status, comm_status, bt_status);
 		break;
 	case AUTO:
-		motor_auto_control_task(bt_status);
+		motor_auto_control_task(btn_status, bt_status);
 		break;
 	default:
 		mobile_state = MANUAL;
