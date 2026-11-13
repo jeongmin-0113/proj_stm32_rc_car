@@ -10,6 +10,5 @@
 
 void motor_control_task_init(void);
 void motor_control_task(void);
-void motor_auto_control_task(void);
 
 #endif /* SRC_AP_TASK_MOTOR_CONTROL_MOTOR_CONTROL_TASK_H_ */

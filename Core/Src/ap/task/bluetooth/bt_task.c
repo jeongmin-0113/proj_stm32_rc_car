@@ -67,6 +67,14 @@ void bt_task() {
 				Lcd_writeStringXY(1, 0, "BT Task RIGHT      ");
 				osMutexRelease(lcdMutexHandle);
 			}
+		} else if (rx_data == 'M') {
+			printf("M\n");
+			osMessagePut(BtQueueHandle, BT_MODE, 10);
+			osMessagePut(BtQueueHandle, BT_STOP, 10);
+			if (osMutexWait(lcdMutexHandle, osWaitForever) == osOK) {
+				Lcd_writeStringXY(1, 0, "BT Task MODE      ");
+				osMutexRelease(lcdMutexHandle);
+			}
 		} else {
 			osMessagePut(BtQueueHandle, BT_NO, 10);
 		}

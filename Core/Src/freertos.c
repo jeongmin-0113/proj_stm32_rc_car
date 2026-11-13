@@ -179,10 +179,6 @@ void MX_FREERTOS_Init(void) {
  * @retval None
  */
 uint32_t front = 0, left = 0, right = 0;
-typedef enum {
-	MANUAL, AUTO
-} automobile_state_t;
-automobile_state_t state = MANUAL;
 
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void const *argument) {
@@ -211,11 +207,7 @@ void StartMotorTask(void const *argument) {
 	motor_control_task_init();
 	/* Infinite loop */
 	for (;;) {
-		if (state == AUTO) {
-			motor_auto_control_task();
-		} else {
-			motor_control_task();
-		}
+		motor_control_task();
 		osDelay(1);
 	}
 	/* USER CODE END StartMotorTask */
