@@ -15,6 +15,7 @@ motor_t motorL, motorR;
 motor_state_t motor_state = STOP;
 
 extern TIM_HandleTypeDef htim3;
+extern uint32_t front, left, right;
 
 void motor_control_task_init(void) {
 	motor_init(&motorL, &htim3, TIM_CHANNEL_1, MOTOR_LEFT1_GPIO,
@@ -46,6 +47,80 @@ bool motor_getCondition(btn_status_t btn_status, comm_status_t comm_status,
 		break;
 	default:
 		return false;
+		break;
+	}
+}
+
+#define DIST_DANGER	20
+#define DIST_SAFE	40
+#define DIST_INVALID 0xFFFFFFFF
+
+typedef enum {
+	AUTO_STOP, AUTO_STRAIGHT, AUTO_LEFT, AUTO_RIGHT, AUTO_BACK
+} auto_mobile_state_t;
+
+bool motor_stucked() {
+	return (front <= DIST_DANGER) && (left <= DIST_DANGER)
+			&& (right <= DIST_DANGER);
+}
+
+void motor_auto_control_task(void) {
+	static uint32_t d_front = 0, d_left = 0, d_right = 0;
+	static auto_mobile_state_t state = AUTO_STOP;
+
+	bt_status_t bt_status = BT_NO;
+	osEvent bt_evt = osMessageGet(BtQueueHandle, 0);
+	if (bt_evt.status == osEventMessage) {
+		bt_status = bt_evt.value.v;
+	}
+
+	d_front = (front == DIST_INVALID) ? d_front : front;
+
+	switch (state) {
+	case AUTO_STOP:
+		if ((bt_status == BT_FRONT)) {
+			state = AUTO_STRAIGHT;
+		}
+
+		motor_stop(&motorL, &motorR);
+		break;
+	case AUTO_STRAIGHT:
+		if ((bt_status == BT_STOP) || (motor_stucked())) {
+			state = AUTO_STOP;
+		} else if (d_front <= DIST_DANGER) {
+			d_left = (left == DIST_INVALID) ? d_left : left;
+			d_right = (right == DIST_INVALID) ? d_right : right;
+
+			if (d_left >= d_right) {
+				state = AUTO_LEFT;
+			} else {
+				state = AUTO_RIGHT;
+			}
+		}
+
+		motor_forward(&motorL, &motorR);
+		break;
+	case AUTO_LEFT:
+		if ((bt_status == BT_STOP) || (motor_stucked())) {
+			state = AUTO_STOP;
+		} else if (d_front >= DIST_SAFE) {
+			state = AUTO_STRAIGHT;
+		}
+
+		motor_left(&motorL, &motorR);
+		break;
+	case AUTO_RIGHT:
+		if ((bt_status == BT_STOP) || (motor_stucked())) {
+			state = AUTO_STOP;
+		} else if (d_front >= DIST_SAFE) {
+			state = AUTO_STRAIGHT;
+		}
+
+		motor_right(&motorL, &motorR);
+		break;
+	default:
+		state = AUTO_STOP;
+		motor_stop();
 		break;
 	}
 }
