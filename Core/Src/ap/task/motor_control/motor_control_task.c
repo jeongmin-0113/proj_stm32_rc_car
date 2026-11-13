@@ -22,7 +22,7 @@ void motor_control_task_init(void) {
 	MOTOR_LEFT1_PIN, MOTOR_LEFT2_GPIO, MOTOR_LEFT2_PIN);
 	motor_init(&motorR, &htim3, TIM_CHANNEL_3, MOTOR_RIGHT1_GPIO,
 	MOTOR_RIGHT1_PIN, MOTOR_RIGHT2_GPIO, MOTOR_RIGHT2_PIN);
-	motor_setSpeed(900);
+	motor_setSpeed(500); // boot state is AUTO (mobile_state = AUTO)
 }
 
 bool motor_getCondition(btn_status_t btn_status, comm_status_t comm_status,
@@ -97,9 +97,9 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 			auto_state = AUTO_STOP;
 		} else if (d_front <= DIST_DANGER) {
 			if (d_left >= d_right) {
-				auto_state = AUTO_RIGHT;
-			} else {
 				auto_state = AUTO_LEFT;
+			} else {
+				auto_state = AUTO_RIGHT;
 			}
 		}
 
@@ -142,9 +142,9 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 	case AUTO_BACK:
 		if ((d_left >= DIST_SAFE) || (d_right >= DIST_SAFE)) {
 			if (d_left >= d_right) {
-				auto_state = AUTO_RIGHT;
-			} else {
 				auto_state = AUTO_LEFT;
+			} else {
+				auto_state = AUTO_RIGHT;
 			}
 		}
 
@@ -309,6 +309,7 @@ void motor_control_task() {
 			motor_setSpeed(500);
 		} else {
 			mobile_state = MANUAL;
+			motor_setSpeed(1000); // manual: max speed
 		}
 		motor_stop(&motorL, &motorR);
 		return;
