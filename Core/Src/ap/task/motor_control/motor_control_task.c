@@ -22,7 +22,7 @@ void motor_control_task_init(void) {
 	MOTOR_LEFT1_PIN, MOTOR_LEFT2_GPIO, MOTOR_LEFT2_PIN);
 	motor_init(&motorR, &htim3, TIM_CHANNEL_3, MOTOR_RIGHT1_GPIO,
 	MOTOR_RIGHT1_PIN, MOTOR_RIGHT2_GPIO, MOTOR_RIGHT2_PIN);
-	motor_setSpeed(500); // boot state is AUTO (mobile_state = AUTO)
+	motor_setSpeed(700);
 }
 
 bool motor_getCondition(btn_status_t btn_status, comm_status_t comm_status,
@@ -75,8 +75,8 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 	static uint32_t d_front = 0, d_left = 0, d_right = 0;
 
 	d_front = (front == DIST_INVALID) ? 400 : front;
-	d_left = (left == DIST_INVALID) ? 0 : left;
-	d_right = (right == DIST_INVALID) ? 0 : right;
+	d_left = (left == DIST_INVALID) ? d_left : left;
+	d_right = (right == DIST_INVALID) ? d_right : right;
 
 	switch (auto_state) {
 	case AUTO_STOP:
@@ -306,7 +306,7 @@ void motor_control_task() {
 		manual_state = STOP;
 		if (mobile_state == MANUAL) {
 			mobile_state = AUTO;
-			motor_setSpeed(500);
+			motor_setSpeed(520);
 		} else {
 			mobile_state = MANUAL;
 			motor_setSpeed(1000); // manual: max speed

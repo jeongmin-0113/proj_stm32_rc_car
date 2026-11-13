@@ -69,9 +69,11 @@ void dist_measure(sr04_sensor_t *s, uint32_t *cm) {
 
 void dist_task(uint32_t *front, uint32_t *left, uint32_t *right) {
 	dist_measure(&sr04_front, front);
-	osDelay(20);
+	osDelay(17);
 	dist_measure(&sr04_left, left);
-	osDelay(20);
+	osDelay(17);
+	dist_measure(&sr04_front, front);
+	osDelay(17);
 	dist_measure(&sr04_right, right);
-	osDelay(20);
+	osDelay(17);
 }
