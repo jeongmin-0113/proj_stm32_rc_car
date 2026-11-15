@@ -10,6 +10,7 @@
 #include "../comm/comm_task.h"
 #include "../../../driver/lcd/lcd.h"
 #include <stdbool.h>
+#include <stdio.h>
 
 motor_t motorL, motorR;
 motor_state_t manual_state = STOP;
@@ -55,6 +56,9 @@ bool motor_getCondition(btn_status_t btn_status, comm_status_t comm_status,
 #define DIST_SAFE	45 // motor speed 500
 #define DIST_INVALID 0xFFFFFFFF
 
+#define DIST_AVOID 40
+#define DIST_SIDE_DANGER 10
+
 typedef enum {
 	AUTO_STOP, AUTO_STRAIGHT, AUTO_LEFT, AUTO_RIGHT, AUTO_BACK
 } auto_state_t;
@@ -77,6 +81,12 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 	d_front = (front == DIST_INVALID) ? 400 : front;
 	d_left = (left == DIST_INVALID) ? d_left : left;
 	d_right = (right == DIST_INVALID) ? d_right : right;
+//	if (osMutexWait(lcdMutexHandle, osWaitForever) == osOK) {
+//		char buf[30];
+//		sprintf(buf, "L:%3ldF:%3ldR:%3ld", d_left, d_front, d_right);
+//		Lcd_writeStringXY(1, 0, buf);
+//		osMutexRelease(lcdMutexHandle);
+//	}
 
 	switch (auto_state) {
 	case AUTO_STOP:
@@ -101,9 +111,20 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 			} else {
 				auto_state = AUTO_RIGHT;
 			}
+//			motor_setSpeed(400);
 		}
 
-		motor_forward(&motorL, &motorR);
+		int8_t corr = 0;
+		if (d_left < DIST_SIDE_DANGER) {
+			corr = -DIST_AVOID;          // 왼쪽 벽에 붙으면 오른쪽으로
+			motor_forward_corr(&motorL, &motorR, corr);
+		} else if (d_right < DIST_SIDE_DANGER) {
+			corr = DIST_AVOID;           // 오른쪽 벽에 붙으면 왼쪽으로
+			motor_forward_corr(&motorL, &motorR, corr);
+		} else {
+			motor_forward(&motorL, &motorR);
+		}
+
 		if (osMutexWait(lcdMutexHandle, osWaitForever) == osOK) {
 			Lcd_writeStringXY(0, 0, "AUTO task FORWARD   ");
 			osMutexRelease(lcdMutexHandle);
@@ -307,6 +328,7 @@ void motor_control_task() {
 		if (mobile_state == MANUAL) {
 			mobile_state = AUTO;
 			motor_setSpeed(520);
+//			motor_setSpeed(650);
 		} else {
 			mobile_state = MANUAL;
 			motor_setSpeed(1000); // manual: max speed

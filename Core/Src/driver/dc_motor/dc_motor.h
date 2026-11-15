@@ -41,5 +41,6 @@ void motor_forward(motor_t* motorL, motor_t* motorR);
 void motor_backward(motor_t* motorL, motor_t* motorR);
 void motor_right(motor_t* motorL, motor_t* motorR);
 void motor_left(motor_t* motorL, motor_t* motorR);
+void motor_forward_corr(motor_t *motorL, motor_t *motorR, int16_t corr);
 
 #endif /* SRC_DRIVER_DC_MOTOR_DC_MOTOR_H_ */

@@ -28,7 +28,21 @@ void motor_setSpeed(uint16_t speed) {
 	motor_speed = speed;
 }
 
-void motor_stop(motor_t* motorL, motor_t* motorR) {
+void motor_forward_corr(motor_t *motorL, motor_t *motorR, int16_t corr) {
+	__HAL_TIM_SET_COMPARE(motorL->htim, motorL->ch, motor_speed - 1 - corr);
+	HAL_GPIO_WritePin(motorL->GPIO1, motorL->GPIO1_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(motorL->GPIO2, motorL->GPIO2_Pin, GPIO_PIN_RESET);
+
+	__HAL_TIM_SET_COMPARE(motorR->htim, motorR->ch,
+			(int32_t )motor_speed - 1 + corr);
+	HAL_GPIO_WritePin(motorR->GPIO1, motorR->GPIO1_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(motorR->GPIO2, motorR->GPIO2_Pin, GPIO_PIN_RESET);
+
+	HAL_TIM_PWM_Start(motorL->htim, motorL->ch);
+	HAL_TIM_PWM_Start(motorR->htim, motorR->ch);
+}
+
+void motor_stop(motor_t *motorL, motor_t *motorR) {
 	// direction pins LOW -> motor stops regardless of EN state
 	HAL_GPIO_WritePin(motorL->GPIO1, motorL->GPIO1_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(motorL->GPIO2, motorL->GPIO2_Pin, GPIO_PIN_RESET);
@@ -39,7 +53,7 @@ void motor_stop(motor_t* motorL, motor_t* motorR) {
 	HAL_TIM_PWM_Stop(motorR->htim, motorR->ch);
 }
 
-void motor_forward(motor_t* motorL, motor_t* motorR) {
+void motor_forward(motor_t *motorL, motor_t *motorR) {
 	// left
 	__HAL_TIM_SET_COMPARE(motorL->htim, motorL->ch, motor_speed - 1);
 	HAL_GPIO_WritePin(motorL->GPIO1, motorL->GPIO1_Pin, GPIO_PIN_SET);
@@ -54,7 +68,7 @@ void motor_forward(motor_t* motorL, motor_t* motorR) {
 	HAL_TIM_PWM_Start(motorR->htim, motorR->ch);
 }
 
-void motor_backward(motor_t* motorL, motor_t* motorR) {
+void motor_backward(motor_t *motorL, motor_t *motorR) {
 	// left
 	__HAL_TIM_SET_COMPARE(motorL->htim, motorL->ch, motor_speed - 1);
 	HAL_GPIO_WritePin(motorL->GPIO1, motorL->GPIO1_Pin, GPIO_PIN_RESET);
@@ -69,7 +83,7 @@ void motor_backward(motor_t* motorL, motor_t* motorR) {
 	HAL_TIM_PWM_Start(motorR->htim, motorR->ch);
 }
 
-void motor_right(motor_t* motorL, motor_t* motorR) {
+void motor_right(motor_t *motorL, motor_t *motorR) {
 	// left -> forward
 	__HAL_TIM_SET_COMPARE(motorL->htim, motorL->ch, motor_speed - 1);
 	HAL_GPIO_WritePin(motorL->GPIO1, motorL->GPIO1_Pin, GPIO_PIN_SET);
@@ -84,7 +98,7 @@ void motor_right(motor_t* motorL, motor_t* motorR) {
 	HAL_TIM_PWM_Start(motorR->htim, motorR->ch);
 }
 
-void motor_left(motor_t* motorL, motor_t* motorR) {
+void motor_left(motor_t *motorL, motor_t *motorR) {
 	// left -> backward
 	__HAL_TIM_SET_COMPARE(motorL->htim, motorL->ch, motor_speed - 1);
 	HAL_GPIO_WritePin(motorL->GPIO1, motorL->GPIO1_Pin, GPIO_PIN_RESET);

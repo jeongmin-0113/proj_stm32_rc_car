@@ -72,8 +72,6 @@ void dist_task(uint32_t *front, uint32_t *left, uint32_t *right) {
 	osDelay(17);
 	dist_measure(&sr04_left, left);
 	osDelay(17);
-	dist_measure(&sr04_front, front);
-	osDelay(17);
 	dist_measure(&sr04_right, right);
 	osDelay(17);
 }

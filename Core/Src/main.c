@@ -65,7 +65,6 @@ int __io_putchar(int ch)
 	ITM_SendChar(ch); // 디버그 모드로 ch 보내는 명령어
     return ch;
 }
-
 /* USER CODE END 0 */
 
 /**
