@@ -9,6 +9,7 @@
 #include "../../message.h"
 #include "../comm/comm_task.h"
 #include "../../../driver/lcd/lcd.h"
+#include "../indicator/indicator.h"
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -23,7 +24,8 @@ void motor_control_task_init(void) {
 	MOTOR_LEFT1_PIN, MOTOR_LEFT2_GPIO, MOTOR_LEFT2_PIN);
 	motor_init(&motorR, &htim3, TIM_CHANNEL_3, MOTOR_RIGHT1_GPIO,
 	MOTOR_RIGHT1_PIN, MOTOR_RIGHT2_GPIO, MOTOR_RIGHT2_PIN);
-	motor_setSpeed(700);
+	motor_setSpeed(500); // boot state is AUTO (mobile_state = AUTO)
+	indicator_init();
 }
 
 bool motor_getCondition(btn_status_t btn_status, comm_status_t comm_status,
@@ -296,6 +298,26 @@ void motor_manual_control_task(btn_status_t btn_status,
 
 }
 
+// current motion for LEDs / buzzer, common to MANUAL and AUTO
+static motor_state_t motor_get_motion(void) {
+	if (mobile_state == MANUAL) {
+		return manual_state;
+	}
+
+	switch (auto_state) {
+	case AUTO_STRAIGHT:
+		return FORWARD;
+	case AUTO_LEFT:
+		return LEFT;
+	case AUTO_RIGHT:
+		return RIGHT;
+	case AUTO_BACK:
+		return BACKWARD;
+	default:
+		return STOP;
+	}
+}
+
 void motor_control_task() {
 	osEvent btn_evt, comm_evt, bt_evt;
 	btn_status_t btn_status = BTN_NO;
@@ -334,6 +356,7 @@ void motor_control_task() {
 			motor_setSpeed(1000); // manual: max speed
 		}
 		motor_stop(&motorL, &motorR);
+		indicator_update(STOP);
 		return;
 	}
 
@@ -348,4 +371,6 @@ void motor_control_task() {
 		mobile_state = MANUAL;
 		break;
 	}
+
+	indicator_update(motor_get_motion());
 }
