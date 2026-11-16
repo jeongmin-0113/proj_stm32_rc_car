@@ -56,8 +56,8 @@ bool motor_getCondition(btn_status_t btn_status, comm_status_t comm_status,
 #define DIST_SAFE	45 // motor speed 500
 #define DIST_INVALID 0xFFFFFFFF
 
-#define DIST_AVOID 40
-#define DIST_SIDE_DANGER 10
+#define DIST_AVOID 70
+#define DIST_SIDE_DANGER 15
 
 typedef enum {
 	AUTO_STOP, AUTO_STRAIGHT, AUTO_LEFT, AUTO_RIGHT, AUTO_BACK
@@ -78,7 +78,7 @@ bool motor_stucked() {
 void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 	static uint32_t d_front = 0, d_left = 0, d_right = 0;
 
-	d_front = (front == DIST_INVALID) ? 400 : front;
+	d_front = (front == DIST_INVALID) ? d_front : front;
 	d_left = (left == DIST_INVALID) ? d_left : left;
 	d_right = (right == DIST_INVALID) ? d_right : right;
 //	if (osMutexWait(lcdMutexHandle, osWaitForever) == osOK) {
@@ -114,7 +114,7 @@ void motor_auto_control_task(btn_status_t btn_status, bt_status_t bt_status) {
 //			motor_setSpeed(400);
 		}
 
-		int8_t corr = 0;
+		int16_t corr = 0;
 		if (d_left < DIST_SIDE_DANGER) {
 			corr = -DIST_AVOID;          // 왼쪽 벽에 붙으면 오른쪽으로
 			motor_forward_corr(&motorL, &motorR, corr);
