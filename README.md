@@ -29,8 +29,11 @@ STM32 Nucleo-F411RE와 FreeRTOS로 만든 2륜 RC카입니다.
 
 ### 자율주행
 
+https://github.com/user-attachments/assets/157846a2-8adc-41a9-9e4a-c28ec8cf2d84
 
 ### 수동 조종 (블루투스 (Bluetooth Electronics) D-pad)
+
+https://github.com/user-attachments/assets/f00071d5-292c-4dbb-acac-f6db64778dec
 
 
 ---
